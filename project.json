@@ -1,6 +1,23 @@
 {
   "dependencies": [
     {
+      "name": "flatbuffers",
+      "url": "https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip",
+      "buildSource": "flatbuffers-23.5.26",
+      "cmd": [
+        {
+          "type": "cmake",
+          "source": ".",
+          "options": {
+            "common": {
+              "FLATBUFFERS_BUILD_TESTS": "OFF",
+              "FLATBUFFERS_BUILD_FLATC": "OFF"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "crypto++",
       "url": "https://github.com/abdes/cryptopp-cmake/archive/refs/tags/CRYPTOPP_8_7_0.zip",
       "buildSource": "cryptopp-cmake-CRYPTOPP_8_7_0",

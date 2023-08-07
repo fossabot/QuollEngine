@@ -69,7 +69,7 @@ function Clang-Tidy {
 
     $HeaderArgs = Create-Header-Args ($VendorIncludes + $Headers)
 
-    Get-ChildItem -Recurse -Path $Path -Filter "*.cpp" | ForEach-Object -Parallel {
+    Get-ChildItem -Recurse -File -Path $Path -Filter "*.cpp" | ForEach-Object -Parallel {
         clang-tidy '-header-filter'=.* --p=file --quiet $_.FullName -- --std=c++20 `
             Create-Header-Paths $using:HeaderArgs -D CRYPTOPP_CXX17_UNCAUGHT_EXCEPTIONS
     } -ThrottleLimit $env:NUMBER_OF_PROCESSORS

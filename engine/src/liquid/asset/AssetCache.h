@@ -323,8 +323,7 @@ private:
    * @return Material asset handle
    */
   Result<MaterialAssetHandle>
-  loadMaterialDataFromInputStream(InputBinaryStream &stream,
-                                  const Path &filePath);
+  loadMaterialDataFromInputStream(std::istream &stream, const Path &filePath);
 
   /**
    * @brief Load mesh from input stream

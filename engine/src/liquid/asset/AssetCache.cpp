@@ -132,6 +132,15 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
     return Result<bool>::Ok(true, res.getWarnings());
   }
 
+  if (ext == ".material") {
+    auto res = loadMaterialFromFile(path);
+
+    if (res.hasError()) {
+      return Result<bool>::Error(res.getError());
+    }
+    return Result<bool>::Ok(true, res.getWarnings());
+  }
+
   InputBinaryStream stream(path);
   AssetFileHeader header;
   String magic(AssetFileMagicLength, '$');
@@ -143,15 +152,6 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
 
   stream.read(header.version);
   stream.read(header.type);
-
-  if (header.type == AssetType::Material) {
-    auto res = loadMaterialDataFromInputStream(stream, path);
-
-    if (res.hasError()) {
-      return Result<bool>::Error(res.getError());
-    }
-    return Result<bool>::Ok(true, res.getWarnings());
-  }
 
   if (header.type == AssetType::Mesh) {
     auto res = loadMeshDataFromInputStream(stream, path);

@@ -7,66 +7,101 @@
 #include "OutputBinaryStream.h"
 #include "InputBinaryStream.h"
 
+#include "liquid/schemas/generated/Material.schema.h"
+
 namespace liquid {
 
 Result<Path>
 AssetCache::createMaterialFromAsset(const AssetData<MaterialAsset> &asset) {
-  String extension = ".lqmat";
+  flatbuffers::FlatBufferBuilder builder;
 
-  Path assetPath = (mAssetsPath / (asset.name + extension)).make_preferred();
+  auto baseColorTexture = builder.CreateString(getAssetRelativePath(
+      mRegistry.getTextures(), asset.data.baseColorTexture));
+  auto baseColorTextureCoord = asset.data.baseColorTextureCoord;
+  auto baseColorFactor = schemas::base::Vec4(
+      asset.data.baseColorFactor.x, asset.data.baseColorFactor.y,
+      asset.data.baseColorFactor.z, asset.data.baseColorFactor.w);
 
-  OutputBinaryStream file(assetPath);
+  auto metallicRoughnessTexture = builder.CreateString(getAssetRelativePath(
+      mRegistry.getTextures(), asset.data.metallicRoughnessTexture));
+  auto metallicRoughnessTextureCoord = asset.data.metallicRoughnessTextureCoord;
+  auto metallicFactor = asset.data.metallicFactor;
+  auto roughnessFactor = asset.data.roughnessFactor;
 
-  if (!file.good()) {
-    return Result<Path>::Error("File cannot be opened for writing: " +
-                               assetPath.string());
-  }
+  auto normalTexture = builder.CreateString(
+      getAssetRelativePath(mRegistry.getTextures(), asset.data.normalTexture));
+  auto normalTextureCoord = asset.data.normalTextureCoord;
+  auto normalScale = asset.data.normalScale;
 
-  AssetFileHeader header{};
-  header.type = AssetType::Material;
-  header.version = createVersion(0, 1);
+  auto occlusionTexture = builder.CreateString(getAssetRelativePath(
+      mRegistry.getTextures(), asset.data.occlusionTexture));
+  auto occlusionTextureCoord = asset.data.occlusionTextureCoord;
+  auto occlusionStrength = asset.data.occlusionStrength;
 
-  file.write(header.magic, AssetFileMagicLength);
-  file.write(header.version);
-  file.write(header.type);
+  auto emissiveTexture = builder.CreateString(getAssetRelativePath(
+      mRegistry.getTextures(), asset.data.emissiveTexture));
+  auto emissiveTextureCoord = asset.data.emissiveTextureCoord;
+  auto emissiveFactor = schemas::base::Vec3(asset.data.emissiveFactor.x,
+                                            asset.data.emissiveFactor.y,
+                                            asset.data.emissiveFactor.z);
 
-  auto baseColorTexturePath = getAssetRelativePath(mRegistry.getTextures(),
-                                                   asset.data.baseColorTexture);
-  file.write(baseColorTexturePath);
-  file.write(asset.data.baseColorTextureCoord);
-  file.write(asset.data.baseColorFactor);
+  auto pbrMetallicRoughness = schemas::asset::CreatePBRMetallicRoughness(
+      builder, baseColorTexture, baseColorTextureCoord, &baseColorFactor,
+      metallicRoughnessTexture, metallicRoughnessTextureCoord, metallicFactor,
+      roughnessFactor, normalTexture, normalTextureCoord, normalScale,
+      occlusionTexture, occlusionTextureCoord, occlusionStrength,
+      emissiveTexture, emissiveTextureCoord, &emissiveFactor);
 
-  auto metallicRoughnessTexturePath = getAssetRelativePath(
-      mRegistry.getTextures(), asset.data.metallicRoughnessTexture);
-  file.write(metallicRoughnessTexturePath);
-  file.write(asset.data.metallicRoughnessTextureCoord);
-  file.write(asset.data.metallicFactor);
-  file.write(asset.data.roughnessFactor);
+  auto material = schemas::asset::CreateMaterial(
+      builder, schemas::asset::MaterialData::MaterialData_PBRMetallicRoughness,
+      pbrMetallicRoughness.Union());
 
-  auto normalTexturePath =
-      getAssetRelativePath(mRegistry.getTextures(), asset.data.normalTexture);
-  file.write(normalTexturePath);
-  file.write(asset.data.normalTextureCoord);
-  file.write(asset.data.normalScale);
+  builder.Finish(material, schemas::asset::MaterialIdentifier());
 
-  auto occlusionTexturePath = getAssetRelativePath(mRegistry.getTextures(),
-                                                   asset.data.occlusionTexture);
-  file.write(occlusionTexturePath);
-  file.write(asset.data.occlusionTextureCoord);
-  file.write(asset.data.occlusionStrength);
+  Path assetPath =
+      (mAssetsPath / asset.name).replace_extension("material").make_preferred();
 
-  auto emissiveTexturePath =
-      getAssetRelativePath(mRegistry.getTextures(), asset.data.emissiveTexture);
-  file.write(emissiveTexturePath);
-  file.write(asset.data.emissiveTextureCoord);
-  file.write(asset.data.emissiveFactor);
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(assetPath, std::ios::binary);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+
+  stream.close();
 
   return Result<Path>::Ok(assetPath);
 }
 
 Result<MaterialAssetHandle>
-AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
+AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
                                             const Path &filePath) {
+  std::ifstream infile;
+  infile.open(filePath, std::ios::binary);
+  infile.seekg(0, std::ios::end);
+  auto length = infile.tellg();
+  infile.seekg(0, std::ios::beg);
+  std::vector<uint8_t> buffer(length);
+  infile.read(reinterpret_cast<char *>(buffer.data()), length);
+  infile.close();
+
+  flatbuffers::Verifier::Options options{};
+  flatbuffers::Verifier verifier(buffer.data(), length, options);
+  if (!schemas::asset::VerifyMaterialBuffer(verifier)) {
+    return Result<MaterialAssetHandle>::Error("File is not a valid material: " +
+                                              filePath.string());
+  }
+
+  auto *fbMaterial = schemas::asset::GetMaterial(buffer.data());
+
+  if (!fbMaterial->Verify(verifier)) {
+    return Result<MaterialAssetHandle>::Error("File is not a valid material: " +
+                                              filePath.string());
+  }
+
+  auto *pbrMetallicRoughness = fbMaterial->data_as_PBRMetallicRoughness();
+
+  if (!pbrMetallicRoughness->Verify(verifier)) {
+    return Result<MaterialAssetHandle>::Error("File is not a valid material: " +
+                                              filePath.string());
+  }
 
   AssetData<MaterialAsset> material{};
   material.path = filePath;
@@ -77,9 +112,9 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
 
   // Base color
   {
-    String texturePathStr;
-    stream.read(texturePathStr);
-    const auto &res = getOrLoadTextureFromPath(texturePathStr);
+    const auto &res = getOrLoadTextureFromPath(
+        pbrMetallicRoughness->base_color_texture()->string_view());
+
     if (res.hasData()) {
       material.data.baseColorTexture = res.getData();
       warnings.insert(warnings.end(), res.getWarnings().begin(),
@@ -87,15 +122,22 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
     } else {
       warnings.push_back(res.getError());
     }
-    stream.read(material.data.baseColorTextureCoord);
-    stream.read(material.data.baseColorFactor);
+
+    material.data.baseColorTextureCoord =
+        pbrMetallicRoughness->base_color_texture_coordinate();
+
+    material.data.baseColorFactor =
+        glm::vec4{pbrMetallicRoughness->base_color_factor()->x(),
+                  pbrMetallicRoughness->base_color_factor()->y(),
+                  pbrMetallicRoughness->base_color_factor()->z(),
+                  pbrMetallicRoughness->base_color_factor()->w()};
   }
 
   // Metallic roughness
   {
-    String texturePathStr;
-    stream.read(texturePathStr);
-    const auto &res = getOrLoadTextureFromPath(texturePathStr);
+    const auto &res = getOrLoadTextureFromPath(
+        pbrMetallicRoughness->metallic_roughness_texture()->string_view());
+
     if (res.hasData()) {
       material.data.metallicRoughnessTexture = res.getData();
       warnings.insert(warnings.end(), res.getWarnings().begin(),
@@ -104,16 +146,18 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
       warnings.push_back(res.getError());
     }
 
-    stream.read(material.data.metallicRoughnessTextureCoord);
-    stream.read(material.data.metallicFactor);
-    stream.read(material.data.roughnessFactor);
+    material.data.metallicRoughnessTextureCoord =
+        pbrMetallicRoughness->metallic_roughness_texture_coordinate();
+
+    material.data.metallicFactor = pbrMetallicRoughness->metallic_factor();
+    material.data.roughnessFactor = pbrMetallicRoughness->roughness_factor();
   }
 
   // Normal
   {
-    String texturePathStr;
-    stream.read(texturePathStr);
-    const auto &res = getOrLoadTextureFromPath(texturePathStr);
+    const auto &res = getOrLoadTextureFromPath(
+        pbrMetallicRoughness->normal_texture()->string_view());
+
     if (res.hasData()) {
       material.data.normalTexture = res.getData();
       warnings.insert(warnings.end(), res.getWarnings().begin(),
@@ -121,15 +165,18 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
     } else {
       warnings.push_back(res.getError());
     }
-    stream.read(material.data.normalTextureCoord);
-    stream.read(material.data.normalScale);
+
+    material.data.normalTextureCoord =
+        pbrMetallicRoughness->normal_texture_coordinate();
+
+    material.data.normalScale = pbrMetallicRoughness->normal_scale();
   }
 
   // Occlusion
   {
-    String texturePathStr;
-    stream.read(texturePathStr);
-    const auto &res = getOrLoadTextureFromPath(texturePathStr);
+    const auto &res = getOrLoadTextureFromPath(
+        pbrMetallicRoughness->occlusion_texture()->string_view());
+
     if (res.hasData()) {
       material.data.occlusionTexture = res.getData();
       warnings.insert(warnings.end(), res.getWarnings().begin(),
@@ -137,15 +184,19 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
     } else {
       warnings.push_back(res.getError());
     }
-    stream.read(material.data.occlusionTextureCoord);
-    stream.read(material.data.occlusionStrength);
+
+    material.data.occlusionTextureCoord =
+        pbrMetallicRoughness->occlusion_texture_coordinate();
+
+    material.data.occlusionStrength =
+        pbrMetallicRoughness->occlusion_strength();
   }
 
   // Emissive
   {
-    String texturePathStr;
-    stream.read(texturePathStr);
-    const auto &res = getOrLoadTextureFromPath(texturePathStr);
+    const auto &res = getOrLoadTextureFromPath(
+        pbrMetallicRoughness->emissive_texture()->string_view());
+
     if (res.hasData()) {
       material.data.emissiveTexture = res.getData();
       warnings.insert(warnings.end(), res.getWarnings().begin(),
@@ -153,8 +204,14 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
     } else {
       warnings.push_back(res.getError());
     }
-    stream.read(material.data.emissiveTextureCoord);
-    stream.read(material.data.emissiveFactor);
+
+    material.data.emissiveTextureCoord =
+        pbrMetallicRoughness->emissive_texture_coordinate();
+
+    material.data.emissiveFactor =
+        glm::vec3{pbrMetallicRoughness->emissive_factor()->x(),
+                  pbrMetallicRoughness->emissive_factor()->y(),
+                  pbrMetallicRoughness->emissive_factor()->z()};
   }
 
   return Result<MaterialAssetHandle>::Ok(
@@ -163,16 +220,11 @@ AssetCache::loadMaterialDataFromInputStream(InputBinaryStream &stream,
 
 Result<MaterialAssetHandle>
 AssetCache::loadMaterialFromFile(const Path &filePath) {
-  InputBinaryStream stream(filePath);
+  std::ifstream stream(filePath, std::ios::binary);
 
   if (!stream.good()) {
     return Result<MaterialAssetHandle>::Error(
         "File cannot be opened for reading: " + filePath.string());
-  }
-
-  const auto &header = checkAssetFile(stream, filePath, AssetType::Material);
-  if (header.hasError()) {
-    return Result<MaterialAssetHandle>::Error(header.getError());
   }
 
   return loadMaterialDataFromInputStream(stream, filePath);

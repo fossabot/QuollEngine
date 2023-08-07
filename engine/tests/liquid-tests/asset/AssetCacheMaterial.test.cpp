@@ -7,10 +7,11 @@
 #include "liquid/asset/InputBinaryStream.h"
 
 #include "liquid-tests/Testing.h"
+#include "liquid-tests/schemas/generated/Test.schema.h"
 
-class AssetCacheTest : public ::testing::Test {
+class AssetCacheMaterialTest : public ::testing::Test {
 public:
-  AssetCacheTest() : cache(FixturesPath) {}
+  AssetCacheMaterialTest() : cache(FixturesPath) {}
 
   liquid::AssetData<liquid::MaterialAsset>
   createMaterialAsset(bool createTextures) {
@@ -70,170 +71,7 @@ public:
   liquid::AssetCache cache;
 };
 
-TEST_F(AssetCacheTest, CreatesMaterialWithTexturesFromAsset) {
-  auto asset = createMaterialAsset(true);
-  auto assetFile = cache.createMaterialFromAsset(asset);
-
-  EXPECT_FALSE(assetFile.hasError());
-  EXPECT_FALSE(assetFile.hasWarnings());
-
-  {
-    liquid::InputBinaryStream file(assetFile.getData());
-    EXPECT_TRUE(file.good());
-
-    liquid::AssetFileHeader header;
-
-    liquid::String magic(liquid::AssetFileMagicLength, '$');
-    file.read(magic.data(), magic.size());
-
-    file.read(header.version);
-    file.read(header.type);
-
-    // Base color
-    liquid::String baseTexturePath;
-    file.read(baseTexturePath);
-    int8_t baseTextureCoord = -1;
-    file.read(baseTextureCoord);
-    glm::vec4 baseColorFactor;
-    file.read(baseColorFactor);
-
-    // Metallic roughness
-    liquid::String metallicRoughnessTexturePath;
-    file.read(metallicRoughnessTexturePath);
-    int8_t metallicRoughnessTextureCoord = -1;
-    file.read(metallicRoughnessTextureCoord);
-    float metallicFactor = 0.0f;
-    file.read(metallicFactor);
-    float roughnessFactor = 0.0f;
-    file.read(roughnessFactor);
-
-    // Normal
-    liquid::String normalTexturePath;
-    file.read(normalTexturePath);
-    int8_t normalTextureCoord = -1;
-    file.read(normalTextureCoord);
-    float normalScale = 0.0f;
-    file.read(normalScale);
-
-    // Occlusion
-    liquid::String occlusionTexturePath;
-    file.read(occlusionTexturePath);
-    int8_t occlusionTextureCoord = -1;
-    file.read(occlusionTextureCoord);
-    float occlusionStrength = 0.0f;
-    file.read(occlusionStrength);
-
-    // Emissive
-    liquid::String emissiveTexturePath;
-    file.read(emissiveTexturePath);
-    int8_t emissiveTextureCoord = -1;
-    file.read(emissiveTextureCoord);
-    glm::vec3 emissiveFactor;
-    file.read(emissiveFactor);
-
-    EXPECT_EQ(magic, header.magic);
-    EXPECT_EQ(header.type, liquid::AssetType::Material);
-    EXPECT_EQ(header.version, liquid::createVersion(0, 1));
-    EXPECT_EQ(baseTexturePath, "textures/test.ktx2");
-    EXPECT_EQ(baseTextureCoord, 2);
-    EXPECT_EQ(baseColorFactor, glm::vec4(2.5f, 0.2f, 0.5f, 5.2f));
-    EXPECT_EQ(metallicRoughnessTexturePath, "textures/mr.ktx2");
-    EXPECT_EQ(metallicRoughnessTextureCoord, 3);
-    EXPECT_EQ(metallicFactor, 1.0f);
-    EXPECT_EQ(roughnessFactor, 2.5f);
-    EXPECT_EQ(normalTexturePath, "textures/normal.ktx2");
-    EXPECT_EQ(normalTextureCoord, 4);
-    EXPECT_EQ(normalScale, 0.6f);
-    EXPECT_EQ(occlusionTexturePath, "textures/occlusion.ktx2");
-    EXPECT_EQ(occlusionTextureCoord, 5);
-    EXPECT_EQ(occlusionStrength, 0.4f);
-    EXPECT_EQ(emissiveTexturePath, "textures/emissive.ktx2");
-    EXPECT_EQ(emissiveTextureCoord, 6);
-    EXPECT_EQ(emissiveFactor, glm::vec3(0.5f, 0.6f, 2.5f));
-  }
-}
-
-TEST_F(AssetCacheTest,
-       CreatesMaterialWithoutTexturesFromAssetIfReferencedTexturesAreInvalid) {
-  auto asset = createMaterialAsset(false);
-
-  auto assetFile = cache.createMaterialFromAsset(asset);
-
-  {
-    liquid::InputBinaryStream file(assetFile.getData());
-    EXPECT_TRUE(file.good());
-
-    liquid::AssetFileHeader header;
-    liquid::String magic(liquid::AssetFileMagicLength, '$');
-    file.read(magic.data(), magic.length());
-    file.read(header.version);
-    file.read(header.type);
-
-    // Base color
-    liquid::String baseTexturePath;
-    file.read(baseTexturePath);
-    int8_t baseTextureCoord = -1;
-    file.read(baseTextureCoord);
-    glm::vec4 baseColorFactor;
-    file.read(baseColorFactor);
-
-    // Metallic roughness
-    liquid::String metallicRoughnessTexturePath;
-    file.read(metallicRoughnessTexturePath);
-    int8_t metallicRoughnessTextureCoord = -1;
-    file.read(metallicRoughnessTextureCoord);
-    float metallicFactor = 0.0f;
-    file.read(metallicFactor);
-    float roughnessFactor = 0.0f;
-    file.read(roughnessFactor);
-
-    // Normal
-    liquid::String normalTexturePath;
-    file.read(normalTexturePath);
-    int8_t normalTextureCoord = -1;
-    file.read(normalTextureCoord);
-    float normalScale = 0.0f;
-    file.read(normalScale);
-
-    // Occlusion
-    liquid::String occlusionTexturePath;
-    file.read(occlusionTexturePath);
-    int8_t occlusionTextureCoord = -1;
-    file.read(occlusionTextureCoord);
-    float occlusionStrength = 0.0f;
-    file.read(occlusionStrength);
-
-    // Emissive
-    liquid::String emissiveTexturePath;
-    file.read(emissiveTexturePath);
-    int8_t emissiveTextureCoord = -1;
-    file.read(emissiveTextureCoord);
-    glm::vec3 emissiveFactor;
-    file.read(emissiveFactor);
-
-    EXPECT_EQ(magic, header.magic);
-    EXPECT_EQ(header.type, liquid::AssetType::Material);
-    EXPECT_EQ(header.version, liquid::createVersion(0, 1));
-    EXPECT_EQ(baseTexturePath, "");
-    EXPECT_EQ(baseTextureCoord, 2);
-    EXPECT_EQ(baseColorFactor, glm::vec4(2.5f, 0.2f, 0.5f, 5.2f));
-    EXPECT_EQ(metallicRoughnessTexturePath, "");
-    EXPECT_EQ(metallicRoughnessTextureCoord, 3);
-    EXPECT_EQ(metallicFactor, 1.0f);
-    EXPECT_EQ(roughnessFactor, 2.5f);
-    EXPECT_EQ(normalTexturePath, "");
-    EXPECT_EQ(normalTextureCoord, 4);
-    EXPECT_EQ(normalScale, 0.6f);
-    EXPECT_EQ(occlusionTexturePath, "");
-    EXPECT_EQ(occlusionTextureCoord, 5);
-    EXPECT_EQ(occlusionStrength, 0.4f);
-    EXPECT_EQ(emissiveTexturePath, "");
-    EXPECT_EQ(emissiveTextureCoord, 6);
-    EXPECT_EQ(emissiveFactor, glm::vec3(0.5f, 0.6f, 2.5f));
-  }
-}
-
-TEST_F(AssetCacheTest, LoadsMaterialWithTexturesFromFile) {
+TEST_F(AssetCacheMaterialTest, CreatesMaterialWithTexturesAndLoadsItFromFile) {
   auto asset = createMaterialAsset(true);
 
   auto assetFile = cache.createMaterialFromAsset(asset);
@@ -250,8 +88,8 @@ TEST_F(AssetCacheTest, LoadsMaterialWithTexturesFromFile) {
   EXPECT_NE(handle, liquid::MaterialAssetHandle::Null);
 
   auto &material = cache.getRegistry().getMaterials().getAsset(handle);
-  EXPECT_EQ(material.name, "material1.lqmat");
-  EXPECT_EQ(material.path, FixturesPath / "material1.lqmat");
+  EXPECT_EQ(material.name, "material1.material");
+  EXPECT_EQ(material.path, FixturesPath / "material1.material");
   EXPECT_EQ(material.type, liquid::AssetType::Material);
 
   EXPECT_EQ(material.data.baseColorTexture, asset.data.baseColorTexture);
@@ -281,7 +119,8 @@ TEST_F(AssetCacheTest, LoadsMaterialWithTexturesFromFile) {
   EXPECT_EQ(material.data.emissiveFactor, asset.data.emissiveFactor);
 }
 
-TEST_F(AssetCacheTest, LoadsMaterialWithoutTexturesFromFile) {
+TEST_F(AssetCacheMaterialTest,
+       CreatesMaterialWithoutTexturesAndLoadsItFromFile) {
   auto asset = createMaterialAsset(false);
 
   auto assetFile = cache.createMaterialFromAsset(asset);
@@ -300,8 +139,8 @@ TEST_F(AssetCacheTest, LoadsMaterialWithoutTexturesFromFile) {
   EXPECT_NE(handle, liquid::MaterialAssetHandle::Null);
 
   auto &material = cache.getRegistry().getMaterials().getAsset(handle);
-  EXPECT_EQ(material.name, "material1.lqmat");
-  EXPECT_EQ(material.path, FixturesPath / "material1.lqmat");
+  EXPECT_EQ(material.name, "material1.material");
+  EXPECT_EQ(material.path, FixturesPath / "material1.material");
   EXPECT_EQ(material.type, liquid::AssetType::Material);
 
   EXPECT_EQ(material.data.baseColorTexture, asset.data.baseColorTexture);
@@ -331,7 +170,8 @@ TEST_F(AssetCacheTest, LoadsMaterialWithoutTexturesFromFile) {
   EXPECT_EQ(material.data.emissiveFactor, asset.data.emissiveFactor);
 }
 
-TEST_F(AssetCacheTest, LoadsTexturesWithMaterials) {
+TEST_F(AssetCacheMaterialTest,
+       LoadsTexturesWithMaterialsIfTexturesAreNotLoadedAlready) {
   auto texture = cache.loadTextureFromFile(FixturesPath / "1x1-2d.ktx");
   liquid::AssetData<liquid::MaterialAsset> material{};
   material.name = "test-material";
@@ -352,4 +192,34 @@ TEST_F(AssetCacheTest, LoadsTexturesWithMaterials) {
   auto &newTexture = cache.getRegistry().getTextures().getAsset(
       newMaterial.data.baseColorTexture);
   EXPECT_EQ(newTexture.name, "1x1-2d.ktx");
+}
+
+TEST_F(AssetCacheMaterialTest, FailsToLoadMaterialIfFileIdentifierMismatch) {
+  flatbuffers::FlatBufferBuilder builder;
+  auto testSchema = liquid::schemas::test::CreateTest(
+      builder, builder.CreateString("Test string"), 1);
+  builder.Finish(testSchema, "TEST");
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(FixturesPath / "invalid.material", std::ios::binary);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+  stream.close();
+
+  auto res = cache.loadMaterialFromFile(FixturesPath / "invalid.material");
+  EXPECT_TRUE(res.hasError());
+}
+
+TEST_F(AssetCacheMaterialTest, FailsToLoadMaterialIfInvalidSchema) {
+  flatbuffers::FlatBufferBuilder builder;
+  auto testSchema = liquid::schemas::test::CreateTest(
+      builder, builder.CreateString("Test string"), 1);
+  builder.Finish(testSchema, "LMAT");
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(FixturesPath / "invalid.material", std::ios::binary);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+  stream.close();
+
+  auto res = cache.loadMaterialFromFile(FixturesPath / "invalid.material");
+  EXPECT_TRUE(res.hasError());
 }

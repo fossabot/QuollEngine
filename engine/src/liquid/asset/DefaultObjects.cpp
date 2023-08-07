@@ -94,8 +94,8 @@ AssetData<MeshAsset> createCube() {
 AssetData<MaterialAsset> createDefaultMaterial() {
   AssetData<MaterialAsset> material;
   material.name = "Default material";
-  material.path = "liquid::engine/materials/default.lqmat";
-  material.relativePath = "liquid::engine/materials/default.lqmat";
+  material.path = "liquid::engine/materials/default.material";
+  material.relativePath = "liquid::engine/materials/default.material";
 
   return material;
 }

@@ -1,0 +1,9 @@
+namespace liquid.schemas.test;
+
+table Test {
+    name: string;
+
+    version: uint;
+}
+
+root_type Test;

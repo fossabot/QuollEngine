@@ -54,7 +54,7 @@ public:
         liquid::AssetData<liquid::MaterialAsset> material;
         material.path =
             liquid::Path(FixturesPath / "materials" /
-                         ("material-geom-" + std::to_string(i) + ".lqmat"));
+                         ("material-geom-" + std::to_string(i) + ".material"));
 
         geometry.material =
             cache.getRegistry().getMaterials().addAsset(material);
@@ -114,7 +114,7 @@ public:
       liquid::AssetData<liquid::MaterialAsset> material;
       material.path =
           liquid::Path(FixturesPath / "materials" /
-                       ("material-geom-" + std::to_string(i) + ".lqmat"));
+                       ("material-geom-" + std::to_string(i) + ".material"));
 
       geometry.material = cache.getRegistry().getMaterials().addAsset(material);
 
@@ -210,7 +210,7 @@ TEST_F(AssetCacheTest, CreatesMeshFileFromMeshAsset) {
     liquid::String materialPath;
     file.read(materialPath);
     EXPECT_EQ(materialPath,
-              "materials/material-geom-" + std::to_string(i) + ".lqmat");
+              "materials/material-geom-" + std::to_string(i) + ".material");
   }
 }
 
@@ -414,7 +414,7 @@ TEST_F(AssetCacheTest, CreatesSkinnedMeshFileFromSkinnedMeshAsset) {
     liquid::String materialPath;
     file.read(materialPath);
     EXPECT_EQ(materialPath,
-              "materials/material-geom-" + std::to_string(i) + ".lqmat");
+              "materials/material-geom-" + std::to_string(i) + ".material");
   }
 }
 

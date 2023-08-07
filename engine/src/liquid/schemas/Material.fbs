@@ -1,0 +1,37 @@
+include "./Base.fbs";
+
+namespace liquid.schemas.asset;
+
+table PBRMetallicRoughness {
+    base_color_texture: string;
+    base_color_texture_coordinate: ubyte = 0;
+    base_color_factor: base.Vec4;
+
+    metallic_roughness_texture: string;
+    metallic_roughness_texture_coordinate: ubyte = 0;
+    metallic_factor: float = 0.0;
+    roughness_factor: float = 0.0;
+
+    normal_texture: string;
+    normal_texture_coordinate: ubyte = 0;
+    normal_scale: float = 0.0;
+
+    occlusion_texture: string;
+    occlusion_texture_coordinate: ubyte = 0;
+    occlusion_strength: float = 0.0;
+
+    emissive_texture: string;
+    emissive_texture_coordinate: ubyte = 0;
+    emissive_factor: base.Vec3;
+}
+
+union MaterialData {
+    PBRMetallicRoughness 
+}
+
+table Material {
+    data: MaterialData;
+}
+
+file_identifier "LMAT";
+root_type Material;
