@@ -6,6 +6,8 @@
 #include "liquid/asset/OutputBinaryStream.h"
 #include "liquid/asset/AssetFileHeader.h"
 
+#include "liquid/schemas/generated/Environment.schema.h"
+
 namespace liquid {
 
 Result<Path> AssetCache::createEnvironmentFromAsset(
@@ -20,35 +22,67 @@ Result<Path> AssetCache::createEnvironmentFromAsset(
                              .relativePath.string();
   std::replace(specularMapPath.begin(), specularMapPath.end(), '\\', '/');
 
-  OutputBinaryStream stream(asset.path);
-  AssetFileHeader header{};
-  header.type = AssetType::Environment;
-  header.version = createVersion(0, 1);
-  stream.write(header.magic, AssetFileMagicLength);
-  stream.write(header.version);
-  stream.write(header.type);
+  flatbuffers::FlatBufferBuilder builder;
+  auto environment = schemas::asset::CreateEnvironment(
+      builder, builder.CreateString(irradianceMapPath),
+      builder.CreateString(specularMapPath));
 
-  stream.write(irradianceMapPath);
-  stream.write(specularMapPath);
+  builder.Finish(environment, schemas::asset::EnvironmentIdentifier());
 
-  return Result<Path>::Ok(asset.path);
+  Path assetPath = (mAssetsPath / asset.name)
+                       .replace_extension("environment")
+                       .make_preferred();
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(assetPath, std::ios::binary);
+  if (!stream.good()) {
+    return Result<Path>::Error("File cannot be opened for writing: " +
+                               assetPath.string());
+  }
+
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+  stream.close();
+
+  return Result<Path>::Ok(assetPath);
 }
 
 Result<EnvironmentAssetHandle>
-AssetCache::loadEnvironmentDataFromInputStream(InputBinaryStream &stream,
+AssetCache::loadEnvironmentDataFromInputStream(InputBinaryStream &fa,
                                                const Path &filePath) {
-  String irradianceMapPath;
-  stream.read(irradianceMapPath);
+  std::ifstream stream(filePath, std::ios::binary);
+  if (!stream.good()) {
+    return Result<EnvironmentAssetHandle>::Error(
+        "Cannot open environment file: " + filePath.string());
+  }
 
-  String specularMapPath;
-  stream.read(specularMapPath);
+  stream.seekg(0, std::ios::end);
+  auto length = stream.tellg();
+  stream.seekg(0, std::ios::beg);
+  std::vector<uint8_t> buffer(length);
+  stream.read(reinterpret_cast<char *>(buffer.data()), length);
+  stream.close();
 
-  auto irradianceMapRes = getOrLoadTextureFromPath(irradianceMapPath);
+  flatbuffers::Verifier::Options options{};
+  flatbuffers::Verifier verifier(buffer.data(), length, options);
+  if (!schemas::asset::VerifyEnvironmentBuffer(verifier)) {
+    return Result<EnvironmentAssetHandle>::Error(
+        "File is not a valid environment: " + filePath.string());
+  }
+
+  auto *fbEnvironment = schemas::asset::GetEnvironment(buffer.data());
+  if (!fbEnvironment->Verify(verifier)) {
+    return Result<EnvironmentAssetHandle>::Error(
+        "File is not a valid environment as: " + filePath.string());
+  }
+
+  auto irradianceMapRes =
+      getOrLoadTextureFromPath(fbEnvironment->irradiance_map()->str());
   if (irradianceMapRes.hasError()) {
     return Result<EnvironmentAssetHandle>::Error(irradianceMapRes.getError());
   }
 
-  auto specularMapRes = getOrLoadTextureFromPath(specularMapPath);
+  auto specularMapRes =
+      getOrLoadTextureFromPath(fbEnvironment->specular_map()->str());
   if (specularMapRes.hasError()) {
     mRegistry.getTextures().deleteAsset(irradianceMapRes.getData());
     return Result<EnvironmentAssetHandle>::Error(specularMapRes.getError());
@@ -70,11 +104,6 @@ AssetCache::loadEnvironmentDataFromInputStream(InputBinaryStream &stream,
 Result<EnvironmentAssetHandle>
 AssetCache::loadEnvironmentFromFile(const Path &filePath) {
   InputBinaryStream stream(filePath);
-
-  const auto &header = checkAssetFile(stream, filePath, AssetType::Environment);
-  if (header.hasError()) {
-    return Result<EnvironmentAssetHandle>::Error(header.getError());
-  }
 
   return loadEnvironmentDataFromInputStream(stream, filePath);
 }

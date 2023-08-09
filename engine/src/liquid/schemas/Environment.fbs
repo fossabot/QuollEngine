@@ -1,0 +1,12 @@
+include "./Base.fbs";
+
+namespace liquid.schemas.asset;
+
+table Environment {
+    irradiance_map: string (required);
+
+    specular_map: string (required);
+}
+
+file_identifier "LENV";
+root_type Environment;
