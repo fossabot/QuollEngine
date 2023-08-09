@@ -118,7 +118,7 @@ public:
     for (uint32_t i = 0; i < numAnimations; ++i) {
       liquid::AssetData<liquid::AnimationAsset> animation;
       animation.path =
-          FixturesPath / ("skeletons/anim-" + std::to_string(i) + ".lqanim");
+          FixturesPath / ("skeletons/anim-" + std::to_string(i) + ".animation");
       auto handle = cache.getRegistry().getAnimations().addAsset(animation);
       asset.data.animations.push_back(handle);
     }
@@ -677,7 +677,7 @@ TEST_F(AssetCacheTest, LoadsPrefabWithMeshAnimationSkeleton) {
   EXPECT_NE(newAnimationHandle, liquid::AnimationAssetHandle::Null);
   auto &newAnimation =
       cache.getRegistry().getAnimations().getAsset(newAnimationHandle);
-  EXPECT_EQ(newAnimation.name, "test-prefab-animation.lqanim");
+  EXPECT_EQ(newAnimation.name, "test-prefab-animation.animation");
 
   // Validate animator
   auto newAnimatorHandle = newPrefab.data.animators.at(0).value;

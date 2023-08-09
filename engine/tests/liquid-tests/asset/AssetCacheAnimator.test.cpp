@@ -9,24 +9,24 @@
 
 #include "liquid-tests/Testing.h"
 
-class AssetCacheTest : public ::testing::Test {
+class AssetCacheAnimatorTest : public ::testing::Test {
 public:
-  AssetCacheTest() : cache(FixturesPath) {}
+  AssetCacheAnimatorTest() : cache(FixturesPath) {}
 
   liquid::AssetCache cache;
 };
 
-using AssetCacheDeathTest = AssetCacheTest;
+using AssetCacheAnimatorDeathTest = AssetCacheAnimatorTest;
 
-TEST_F(AssetCacheTest, CreatesAnimatorFileFromAsset) {
+TEST_F(AssetCacheAnimatorTest, CreatesAnimatorFileFromAsset) {
   liquid::AssetData<liquid::AnimationAsset> animData{};
-  animData.path = cache.getAssetsPath() / "idle.lqanim";
+  animData.path = cache.getAssetsPath() / "idle.animation";
   auto idle = cache.getRegistry().getAnimations().addAsset(animData);
 
-  animData.path = cache.getAssetsPath() / "walk.lqanim";
+  animData.path = cache.getAssetsPath() / "walk.animation";
   auto walk = cache.getRegistry().getAnimations().addAsset(animData);
 
-  animData.path = cache.getAssetsPath() / "run.lqanim";
+  animData.path = cache.getAssetsPath() / "run.animation";
   auto run = cache.getRegistry().getAnimations().addAsset(animData);
 
   liquid::AssetData<liquid::AnimatorAsset> asset{};
@@ -82,7 +82,7 @@ TEST_F(AssetCacheTest, CreatesAnimatorFileFromAsset) {
     auto output = state["output"];
     EXPECT_TRUE(output.IsMap());
     EXPECT_EQ(output["type"].as<liquid::String>(""), "animation");
-    EXPECT_EQ(output["animation"].as<liquid::String>(""), "idle.lqanim");
+    EXPECT_EQ(output["animation"].as<liquid::String>(""), "idle.animation");
 
     auto on = state["on"];
     EXPECT_TRUE(on.IsSequence());
@@ -110,7 +110,7 @@ TEST_F(AssetCacheTest, CreatesAnimatorFileFromAsset) {
     auto output = state["output"];
     EXPECT_TRUE(output.IsMap());
     EXPECT_EQ(output["type"].as<liquid::String>(""), "animation");
-    EXPECT_EQ(output["animation"].as<liquid::String>(""), "walk.lqanim");
+    EXPECT_EQ(output["animation"].as<liquid::String>(""), "walk.animation");
 
     auto on = state["on"];
     EXPECT_TRUE(on.IsSequence());
@@ -138,7 +138,7 @@ TEST_F(AssetCacheTest, CreatesAnimatorFileFromAsset) {
     auto output = state["output"];
     EXPECT_TRUE(output.IsMap());
     EXPECT_EQ(output["type"].as<liquid::String>(""), "animation");
-    EXPECT_EQ(output["animation"].as<liquid::String>(""), "run.lqanim");
+    EXPECT_EQ(output["animation"].as<liquid::String>(""), "run.animation");
 
     auto on = state["on"];
     EXPECT_TRUE(on.IsSequence());
@@ -158,7 +158,8 @@ TEST_F(AssetCacheTest, CreatesAnimatorFileFromAsset) {
   }
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorFailsIfRequiredPropertiesAreInvalid) {
+TEST_F(AssetCacheAnimatorTest,
+       LoadAnimatorFailsIfRequiredPropertiesAreInvalid) {
   static const liquid::Path FilePath =
       std::filesystem::current_path() / "test.animator";
 
@@ -210,7 +211,7 @@ TEST_F(AssetCacheTest, LoadAnimatorFailsIfRequiredPropertiesAreInvalid) {
   }
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorIgnoresStatesThatHaveInvalidData) {
+TEST_F(AssetCacheAnimatorTest, LoadAnimatorIgnoresStatesThatHaveInvalidData) {
   std::vector<YAML::Node> invalidNodes{
       YAML::Node(YAML::NodeType::Null),
       YAML::Node(YAML::NodeType::Scalar),
@@ -253,7 +254,7 @@ TEST_F(AssetCacheTest, LoadAnimatorIgnoresStatesThatHaveInvalidData) {
   EXPECT_EQ(animator.data.states.at(0).transitions.size(), 0);
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorAddsDummyStateIfNoValidState) {
+TEST_F(AssetCacheAnimatorTest, LoadAnimatorAddsDummyStateIfNoValidState) {
   std::vector<YAML::Node> invalidNodes{
       YAML::Node(YAML::NodeType::Null),
       YAML::Node(YAML::NodeType::Scalar),
@@ -297,7 +298,7 @@ TEST_F(AssetCacheTest, LoadAnimatorAddsDummyStateIfNoValidState) {
   EXPECT_EQ(animator.data.states.at(0).transitions.size(), 0);
 }
 
-TEST_F(AssetCacheTest,
+TEST_F(AssetCacheAnimatorTest,
        LoadAnimatorSetsFirstItemAsInitialStateIfInitialStateIsInvalid) {
   std::vector<YAML::Node> invalidNodes{
       YAML::Node(YAML::NodeType::Null), YAML::Node(YAML::NodeType::Scalar),
@@ -332,7 +333,7 @@ TEST_F(AssetCacheTest,
   }
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorSetsInitialState) {
+TEST_F(AssetCacheAnimatorTest, LoadAnimatorSetsInitialState) {
   static const liquid::Path FilePath =
       std::filesystem::current_path() / "test.animator";
 
@@ -360,7 +361,7 @@ TEST_F(AssetCacheTest, LoadAnimatorSetsInitialState) {
   EXPECT_EQ(animator.data.states.size(), 2);
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorIgnoresInvalidTransitions) {
+TEST_F(AssetCacheAnimatorTest, LoadAnimatorIgnoresInvalidTransitions) {
   std::vector<YAML::Node> invalidNodes{
       YAML::Node(YAML::NodeType::Null),
       YAML::Node(YAML::NodeType::Scalar),
@@ -445,14 +446,14 @@ TEST_F(AssetCacheTest, LoadAnimatorIgnoresInvalidTransitions) {
   EXPECT_EQ(animator.data.states.at(0).transitions.at(0).target, 1);
 }
 
-TEST_F(AssetCacheTest, LoadsAnimatorWithAlreadyLoadedAnimations) {
+TEST_F(AssetCacheAnimatorTest, LoadsAnimatorWithAlreadyLoadedAnimations) {
   static const liquid::Path FilePath =
       std::filesystem::current_path() / "test.animator";
 
   liquid::AssetData<liquid::AnimationAsset> animData{};
-  animData.name = "my-animation.lqanim";
-  animData.relativePath = "my-animation.lqanim";
-  animData.path = cache.getAssetsPath() / "my-animation.lqanim";
+  animData.name = "my-animation.animation";
+  animData.relativePath = "my-animation.animation";
+  animData.path = cache.getAssetsPath() / "my-animation.animation";
 
   auto animationHandle = cache.getRegistry().getAnimations().addAsset(animData);
 
@@ -462,7 +463,7 @@ TEST_F(AssetCacheTest, LoadsAnimatorWithAlreadyLoadedAnimations) {
 
   auto state = node["states"]["idle"];
   state["output"]["type"] = "animation";
-  state["output"]["animation"] = "my-animation.lqanim";
+  state["output"]["animation"] = "my-animation.animation";
 
   std::ofstream stream(FilePath);
   stream << node;
@@ -482,7 +483,8 @@ TEST_F(AssetCacheTest, LoadsAnimatorWithAlreadyLoadedAnimations) {
   EXPECT_EQ(animator.data.states.at(0).animation, animationHandle);
 }
 
-TEST_F(AssetCacheTest, LoadAnimatorLoadsAnimationsBeforeLoadingAnimator) {
+TEST_F(AssetCacheAnimatorTest,
+       LoadAnimatorLoadsAnimationsBeforeLoadingAnimator) {
   static const liquid::Path FilePath =
       std::filesystem::current_path() / "test.animator";
 
@@ -497,7 +499,7 @@ TEST_F(AssetCacheTest, LoadAnimatorLoadsAnimationsBeforeLoadingAnimator) {
 
   auto state = node["states"]["idle"];
   state["output"]["type"] = "animation";
-  state["output"]["animation"] = "my-animation.lqanim";
+  state["output"]["animation"] = "my-animation.animation";
 
   std::ofstream stream(FilePath);
   stream << node;
@@ -518,7 +520,7 @@ TEST_F(AssetCacheTest, LoadAnimatorLoadsAnimationsBeforeLoadingAnimator) {
             liquid::AnimationAssetHandle{0});
 }
 
-TEST_F(AssetCacheTest, UpdatesExistingAnimatorIfHandleExists) {
+TEST_F(AssetCacheAnimatorTest, UpdatesExistingAnimatorIfHandleExists) {
   liquid::AssetData<liquid::AnimatorAsset> animData{};
   animData.relativePath = "my-animator.animator";
   animData.data.states.push_back({});
@@ -544,7 +546,8 @@ TEST_F(AssetCacheTest, UpdatesExistingAnimatorIfHandleExists) {
   EXPECT_EQ(animator.type, liquid::AssetType::Animator);
 }
 
-TEST_F(AssetCacheDeathTest, UpdateAnimatorFailsIfProvidedHandleDoesNotExist) {
+TEST_F(AssetCacheAnimatorTest,
+       UpdateAnimatorFailsIfProvidedHandleDoesNotExist) {
   liquid::AssetData<liquid::AnimatorAsset> animData{};
   animData.relativePath = "my-animator.animator";
   animData.data.states.push_back({});

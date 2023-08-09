@@ -1,0 +1,47 @@
+include "./Base.fbs";
+
+namespace liquid.schemas.asset;
+
+enum KeyframeInterpolation : ubyte {
+    Step,
+    Linear
+}
+
+table KeyframePositionValues {
+    data: [base.Vec4] (required);
+}
+
+table KeyframeRotationValues {
+    data: [base.Vec4] (required);
+}
+
+table KeyframeScaleValues {
+    data: [base.Vec4] (required);
+}
+
+union KeyframeValues {
+    KeyframePositionValues,
+    KeyframeRotationValues,
+    KeyframeScaleValues
+}
+
+table Keyframe {
+    times: [float] (required);
+
+    values: KeyframeValues;
+
+    interpolation: KeyframeInterpolation = Step;
+
+    joint_target: bool;
+
+    joint: ubyte;
+}
+
+table Animation {
+    time: float = 0.0;
+
+    keyframes: [Keyframe] (required);
+}
+
+file_identifier "LANM";
+root_type Animation;

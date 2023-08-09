@@ -4,13 +4,14 @@
 #include "liquid/core/Version.h"
 #include "liquid/asset/AssetCache.h"
 #include "liquid/asset/AssetFileHeader.h"
-#include "liquid/asset/InputBinaryStream.h"
+#include "liquid/schemas/generated/Animation.schema.h"
 
 #include "liquid-tests/Testing.h"
+#include "liquid-tests/schemas/generated/Test.schema.h"
 
-class AssetCacheTest : public ::testing::Test {
+class AssetCacheAnimationTest : public ::testing::Test {
 public:
-  AssetCacheTest() : cache(FixturesPath) {}
+  AssetCacheAnimationTest() : cache(FixturesPath) {}
 
   liquid::AssetCache cache;
 };
@@ -55,69 +56,13 @@ liquid::AssetData<liquid::AnimationAsset> createRandomizedAnimation() {
   return asset;
 }
 
-TEST_F(AssetCacheTest, CreatesAnimationFile) {
-  auto asset = createRandomizedAnimation();
-  auto filePath = cache.createAnimationFromAsset(asset);
-  liquid::InputBinaryStream file(filePath.getData());
-  EXPECT_TRUE(file.good());
-
-  liquid::AssetFileHeader header;
-  liquid::String magic(liquid::AssetFileMagicLength, '$');
-  file.read(magic.data(), magic.length());
-  file.read(header.version);
-  file.read(header.type);
-  EXPECT_EQ(magic, header.magic);
-  EXPECT_EQ(header.version, liquid::createVersion(0, 1));
-  EXPECT_EQ(header.type, liquid::AssetType::Animation);
-
-  float time = 0.0f;
-  uint32_t numKeyframes = 0;
-
-  file.read(time);
-  file.read(numKeyframes);
-
-  EXPECT_EQ(time, 5.0f);
-  EXPECT_EQ(numKeyframes, 5);
-
-  for (uint32_t i = 0; i < numKeyframes; ++i) {
-    auto &keyframe = asset.data.keyframes.at(i);
-
-    liquid::KeyframeSequenceAssetTarget target{0};
-    liquid::KeyframeSequenceAssetInterpolation interpolation{0};
-    bool jointTarget = false;
-    liquid::JointId joint = 0;
-    uint32_t numValues = 0;
-
-    file.read(target);
-    file.read(interpolation);
-    file.read(jointTarget);
-    file.read(joint);
-    file.read(numValues);
-
-    EXPECT_EQ(target, keyframe.target);
-    EXPECT_EQ(interpolation, keyframe.interpolation);
-    EXPECT_EQ(jointTarget, keyframe.jointTarget);
-    EXPECT_EQ(joint, keyframe.joint);
-    EXPECT_EQ(numValues, static_cast<uint32_t>(keyframe.keyframeValues.size()));
-
-    std::vector<float> times(numValues);
-    std::vector<glm::vec4> values(numValues);
-
-    file.read(times);
-    file.read(values);
-    for (uint32_t i = 0; i < numValues; ++i) {
-      EXPECT_EQ(times.at(i), keyframe.keyframeTimes.at(i));
-      EXPECT_EQ(values.at(i), keyframe.keyframeValues.at(i));
-    }
-  }
-}
-
-TEST_F(AssetCacheTest, LoadsAnimationAssetFromFile) {
+TEST_F(AssetCacheAnimationTest, CreatesAnimationAndLoadsItFromFile) {
   auto asset = createRandomizedAnimation();
 
   auto filePath = cache.createAnimationFromAsset(asset);
   auto handle = cache.loadAnimationFromFile(filePath.getData());
   EXPECT_FALSE(handle.hasError());
+  EXPECT_TRUE(handle.hasData());
   EXPECT_NE(handle.getData(), liquid::AnimationAssetHandle::Null);
 
   auto &actual = cache.getRegistry().getAnimations().getAsset(handle.getData());
@@ -141,4 +86,40 @@ TEST_F(AssetCacheTest, LoadsAnimationAssetFromFile) {
       EXPECT_EQ(expectedKf.keyframeValues.at(j), actualKf.keyframeValues.at(j));
     }
   }
+}
+
+TEST_F(AssetCacheAnimationTest, FailsToLoadAnimationIfFileIdentifierMismatch) {
+  flatbuffers::FlatBufferBuilder builder;
+
+  auto keyframes =
+      builder
+          .CreateVector<flatbuffers::Offset<liquid::schemas::asset::Keyframe>>(
+              {});
+
+  auto testSchema =
+      liquid::schemas::asset::CreateAnimation(builder, 0.0f, keyframes);
+  builder.Finish(testSchema, "TEST");
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(FixturesPath / "invalid.animation", std::ios::binary);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+  stream.close();
+
+  auto res = cache.loadAnimationFromFile(FixturesPath / "invalid.animation");
+  EXPECT_TRUE(res.hasError());
+}
+
+TEST_F(AssetCacheAnimationTest, FailsToLoadAnimationIfInvalidSchema) {
+  flatbuffers::FlatBufferBuilder builder;
+  auto testSchema = liquid::schemas::test::CreateTest(
+      builder, builder.CreateString("Test string"), 1);
+  builder.Finish(testSchema, "LANM");
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(FixturesPath / "invalid.animation", std::ios::binary);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
+  stream.close();
+
+  auto res = cache.loadAnimationFromFile(FixturesPath / "invalid.animation");
+  EXPECT_TRUE(res.hasError());
 }

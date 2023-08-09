@@ -120,4 +120,13 @@ static std::vector<uint8_t> fromFb(const flatbuffers::Vector<uint8_t> *value) {
   return output;
 }
 
+static std::vector<float> fromFb(const flatbuffers::Vector<float> *value) {
+  std::vector<float> output(value->size());
+  for (size_t i = 0; i < output.size(); ++i) {
+    output.at(i) = value->Get(static_cast<flatbuffers::uoffset_t>(i));
+  }
+
+  return output;
+}
+
 } // namespace liquid::schemas
