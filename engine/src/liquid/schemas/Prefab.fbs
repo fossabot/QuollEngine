@@ -1,0 +1,72 @@
+include "./Base.fbs";
+
+namespace liquid.schemas.asset;
+
+table EntityName {
+    entity: uint;
+
+    name: string;
+}
+
+struct EntityTransform {
+    entity: uint;
+
+    position: base.Vec3;
+
+    rotation: base.Quat;
+
+    scale: base.Vec3;
+
+    parent: int;   
+}
+
+struct EntityAsset {
+    entity: uint;
+
+    asset: uint;
+}
+
+struct EntityPointLight {
+    entity: uint;
+
+    color: base.Vec4;
+
+    intensity: float;
+
+    range: float;
+}
+
+struct EntityDirectionalLight {
+    entity: uint;
+
+    color: base.Vec4;
+
+    intensity: float;
+
+    direction: base.Vec3;
+}
+
+table Prefab {
+    assets: [string] (required);
+
+    names: [EntityName] (required);
+
+    transforms: [EntityTransform] (required);
+
+    meshes: [EntityAsset] (required);
+
+    materials: [EntityAsset] (required);
+
+    skeletons: [EntityAsset] (required);
+
+    animations: [EntityAsset] (required);
+
+    animators: [EntityAsset] (required);
+
+    point_lights: [EntityPointLight] (required);
+
+    directional_lights: [EntityDirectionalLight] (required);
+}
+
+file_identifier "LPFB";
+root_type Prefab;

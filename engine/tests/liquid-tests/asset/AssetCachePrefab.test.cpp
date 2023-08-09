@@ -8,9 +8,9 @@
 
 #include "liquid-tests/Testing.h"
 
-class AssetCacheTest : public ::testing::Test {
+class AssetCachePrefabTest : public ::testing::Test {
 public:
-  AssetCacheTest() : cache(FixturesPath) {}
+  AssetCachePrefabTest() : cache(FixturesPath) {}
 
   liquid::AssetData<liquid::PrefabAsset> createPrefabAsset() {
     liquid::AssetData<liquid::PrefabAsset> asset;
@@ -145,7 +145,7 @@ public:
   liquid::AssetCache cache;
 };
 
-TEST_F(AssetCacheTest, CreatesPrefabFile) {
+TEST_F(AssetCachePrefabTest, CreatesPrefabFile) {
   auto asset = createPrefabAsset();
 
   auto filePath = cache.createPrefabFromAsset(asset);
@@ -470,7 +470,7 @@ TEST_F(AssetCacheTest, CreatesPrefabFile) {
   }
 }
 
-TEST_F(AssetCacheTest, FailsLoadingPrefabIfPrefabHasNoComponents) {
+TEST_F(AssetCachePrefabTest, FailsLoadingPrefabIfPrefabHasNoComponents) {
   liquid::AssetData<liquid::PrefabAsset> asset;
   asset.name = "test-prefab0";
   auto filePath = cache.createPrefabFromAsset(asset);
@@ -481,7 +481,7 @@ TEST_F(AssetCacheTest, FailsLoadingPrefabIfPrefabHasNoComponents) {
   EXPECT_FALSE(res.hasWarnings());
 }
 
-TEST_F(AssetCacheTest, LoadsPrefabFile) {
+TEST_F(AssetCachePrefabTest, CreatesPrefabAndLoadsItFromFile) {
   auto asset = createPrefabAsset();
   auto filePath = cache.createPrefabFromAsset(asset);
   auto handle = cache.loadPrefabFromFile(filePath.getData());
@@ -574,7 +574,7 @@ TEST_F(AssetCacheTest, LoadsPrefabFile) {
   }
 }
 
-TEST_F(AssetCacheTest, LoadsPrefabWithMeshAnimationSkeleton) {
+TEST_F(AssetCachePrefabTest, LoadsPrefabWithMeshAnimationSkeleton) {
   // Create texture
   auto textureHandle = cache.loadTextureFromFile(FixturesPath / "1x1-2d.ktx");
 
