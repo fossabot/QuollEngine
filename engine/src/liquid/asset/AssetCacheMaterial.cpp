@@ -8,6 +8,7 @@
 #include "InputBinaryStream.h"
 
 #include "liquid/schemas/generated/Material.schema.h"
+#include "liquid/schemas/FlatbufferHelpers.h"
 
 namespace liquid {
 
@@ -18,9 +19,7 @@ AssetCache::createMaterialFromAsset(const AssetData<MaterialAsset> &asset) {
   auto baseColorTexture = builder.CreateString(getAssetRelativePath(
       mRegistry.getTextures(), asset.data.baseColorTexture));
   auto baseColorTextureCoord = asset.data.baseColorTextureCoord;
-  auto baseColorFactor = schemas::base::Vec4(
-      asset.data.baseColorFactor.x, asset.data.baseColorFactor.y,
-      asset.data.baseColorFactor.z, asset.data.baseColorFactor.w);
+  auto baseColorFactor = schemas::toFb(asset.data.baseColorFactor);
 
   auto metallicRoughnessTexture = builder.CreateString(getAssetRelativePath(
       mRegistry.getTextures(), asset.data.metallicRoughnessTexture));
@@ -41,9 +40,7 @@ AssetCache::createMaterialFromAsset(const AssetData<MaterialAsset> &asset) {
   auto emissiveTexture = builder.CreateString(getAssetRelativePath(
       mRegistry.getTextures(), asset.data.emissiveTexture));
   auto emissiveTextureCoord = asset.data.emissiveTextureCoord;
-  auto emissiveFactor = schemas::base::Vec3(asset.data.emissiveFactor.x,
-                                            asset.data.emissiveFactor.y,
-                                            asset.data.emissiveFactor.z);
+  auto emissiveFactor = schemas::toFb(asset.data.emissiveFactor);
 
   auto pbrMetallicRoughness = schemas::asset::CreatePBRMetallicRoughness(
       builder, baseColorTexture, baseColorTextureCoord, &baseColorFactor,
@@ -63,6 +60,11 @@ AssetCache::createMaterialFromAsset(const AssetData<MaterialAsset> &asset) {
 
   const auto *ptr = builder.GetBufferPointer();
   std::ofstream stream(assetPath, std::ios::binary);
+  if (!stream.good()) {
+    return Result<Path>::Error("File cannot be opened for writing: " +
+                               assetPath.string());
+  }
+
   stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
 
   stream.close();
@@ -71,16 +73,20 @@ AssetCache::createMaterialFromAsset(const AssetData<MaterialAsset> &asset) {
 }
 
 Result<MaterialAssetHandle>
-AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
-                                            const Path &filePath) {
-  std::ifstream infile;
-  infile.open(filePath, std::ios::binary);
-  infile.seekg(0, std::ios::end);
-  auto length = infile.tellg();
-  infile.seekg(0, std::ios::beg);
+AssetCache::loadMaterialFromFile(const Path &filePath) {
+  std::ifstream stream(filePath, std::ios::binary);
+
+  if (!stream.good()) {
+    return Result<MaterialAssetHandle>::Error("Cannot open material file: " +
+                                              filePath.string());
+  }
+
+  stream.seekg(0, std::ios::end);
+  auto length = stream.tellg();
+  stream.seekg(0, std::ios::beg);
   std::vector<uint8_t> buffer(length);
-  infile.read(reinterpret_cast<char *>(buffer.data()), length);
-  infile.close();
+  stream.read(reinterpret_cast<char *>(buffer.data()), length);
+  stream.close();
 
   flatbuffers::Verifier::Options options{};
   flatbuffers::Verifier verifier(buffer.data(), length, options);
@@ -113,7 +119,7 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
   // Base color
   {
     const auto &res = getOrLoadTextureFromPath(
-        pbrMetallicRoughness->base_color_texture()->string_view());
+        pbrMetallicRoughness->base_color_texture()->str());
 
     if (res.hasData()) {
       material.data.baseColorTexture = res.getData();
@@ -127,16 +133,13 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
         pbrMetallicRoughness->base_color_texture_coordinate();
 
     material.data.baseColorFactor =
-        glm::vec4{pbrMetallicRoughness->base_color_factor()->x(),
-                  pbrMetallicRoughness->base_color_factor()->y(),
-                  pbrMetallicRoughness->base_color_factor()->z(),
-                  pbrMetallicRoughness->base_color_factor()->w()};
+        schemas::fromFb(pbrMetallicRoughness->base_color_factor());
   }
 
   // Metallic roughness
   {
     const auto &res = getOrLoadTextureFromPath(
-        pbrMetallicRoughness->metallic_roughness_texture()->string_view());
+        pbrMetallicRoughness->metallic_roughness_texture()->str());
 
     if (res.hasData()) {
       material.data.metallicRoughnessTexture = res.getData();
@@ -155,8 +158,8 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
 
   // Normal
   {
-    const auto &res = getOrLoadTextureFromPath(
-        pbrMetallicRoughness->normal_texture()->string_view());
+    const auto &res =
+        getOrLoadTextureFromPath(pbrMetallicRoughness->normal_texture()->str());
 
     if (res.hasData()) {
       material.data.normalTexture = res.getData();
@@ -175,7 +178,7 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
   // Occlusion
   {
     const auto &res = getOrLoadTextureFromPath(
-        pbrMetallicRoughness->occlusion_texture()->string_view());
+        pbrMetallicRoughness->occlusion_texture()->str());
 
     if (res.hasData()) {
       material.data.occlusionTexture = res.getData();
@@ -195,7 +198,7 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
   // Emissive
   {
     const auto &res = getOrLoadTextureFromPath(
-        pbrMetallicRoughness->emissive_texture()->string_view());
+        pbrMetallicRoughness->emissive_texture()->str());
 
     if (res.hasData()) {
       material.data.emissiveTexture = res.getData();
@@ -209,25 +212,11 @@ AssetCache::loadMaterialDataFromInputStream(std::istream &stream,
         pbrMetallicRoughness->emissive_texture_coordinate();
 
     material.data.emissiveFactor =
-        glm::vec3{pbrMetallicRoughness->emissive_factor()->x(),
-                  pbrMetallicRoughness->emissive_factor()->y(),
-                  pbrMetallicRoughness->emissive_factor()->z()};
+        schemas::fromFb(pbrMetallicRoughness->emissive_factor());
   }
 
   return Result<MaterialAssetHandle>::Ok(
       mRegistry.getMaterials().addAsset(material), warnings);
-}
-
-Result<MaterialAssetHandle>
-AssetCache::loadMaterialFromFile(const Path &filePath) {
-  std::ifstream stream(filePath, std::ios::binary);
-
-  if (!stream.good()) {
-    return Result<MaterialAssetHandle>::Error(
-        "File cannot be opened for reading: " + filePath.string());
-  }
-
-  return loadMaterialDataFromInputStream(stream, filePath);
 }
 
 Result<MaterialAssetHandle>

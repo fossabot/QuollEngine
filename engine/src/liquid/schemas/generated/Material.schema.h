@@ -136,27 +136,27 @@ struct PBRMetallicRoughness FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_BASE_COLOR_TEXTURE) &&
+           VerifyOffsetRequired(verifier, VT_BASE_COLOR_TEXTURE) &&
            verifier.VerifyString(base_color_texture()) &&
            VerifyField<uint8_t>(verifier, VT_BASE_COLOR_TEXTURE_COORDINATE, 1) &&
-           VerifyField<liquid::schemas::base::Vec4>(verifier, VT_BASE_COLOR_FACTOR, 4) &&
-           VerifyOffset(verifier, VT_METALLIC_ROUGHNESS_TEXTURE) &&
+           VerifyFieldRequired<liquid::schemas::base::Vec4>(verifier, VT_BASE_COLOR_FACTOR, 4) &&
+           VerifyOffsetRequired(verifier, VT_METALLIC_ROUGHNESS_TEXTURE) &&
            verifier.VerifyString(metallic_roughness_texture()) &&
            VerifyField<uint8_t>(verifier, VT_METALLIC_ROUGHNESS_TEXTURE_COORDINATE, 1) &&
            VerifyField<float>(verifier, VT_METALLIC_FACTOR, 4) &&
            VerifyField<float>(verifier, VT_ROUGHNESS_FACTOR, 4) &&
-           VerifyOffset(verifier, VT_NORMAL_TEXTURE) &&
+           VerifyOffsetRequired(verifier, VT_NORMAL_TEXTURE) &&
            verifier.VerifyString(normal_texture()) &&
            VerifyField<uint8_t>(verifier, VT_NORMAL_TEXTURE_COORDINATE, 1) &&
            VerifyField<float>(verifier, VT_NORMAL_SCALE, 4) &&
-           VerifyOffset(verifier, VT_OCCLUSION_TEXTURE) &&
+           VerifyOffsetRequired(verifier, VT_OCCLUSION_TEXTURE) &&
            verifier.VerifyString(occlusion_texture()) &&
            VerifyField<uint8_t>(verifier, VT_OCCLUSION_TEXTURE_COORDINATE, 1) &&
            VerifyField<float>(verifier, VT_OCCLUSION_STRENGTH, 4) &&
-           VerifyOffset(verifier, VT_EMISSIVE_TEXTURE) &&
+           VerifyOffsetRequired(verifier, VT_EMISSIVE_TEXTURE) &&
            verifier.VerifyString(emissive_texture()) &&
            VerifyField<uint8_t>(verifier, VT_EMISSIVE_TEXTURE_COORDINATE, 1) &&
-           VerifyField<liquid::schemas::base::Vec3>(verifier, VT_EMISSIVE_FACTOR, 4) &&
+           VerifyFieldRequired<liquid::schemas::base::Vec3>(verifier, VT_EMISSIVE_FACTOR, 4) &&
            verifier.EndTable();
   }
 };
@@ -220,6 +220,13 @@ struct PBRMetallicRoughnessBuilder {
   ::flatbuffers::Offset<PBRMetallicRoughness> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = ::flatbuffers::Offset<PBRMetallicRoughness>(end);
+    fbb_.Required(o, PBRMetallicRoughness::VT_BASE_COLOR_TEXTURE);
+    fbb_.Required(o, PBRMetallicRoughness::VT_BASE_COLOR_FACTOR);
+    fbb_.Required(o, PBRMetallicRoughness::VT_METALLIC_ROUGHNESS_TEXTURE);
+    fbb_.Required(o, PBRMetallicRoughness::VT_NORMAL_TEXTURE);
+    fbb_.Required(o, PBRMetallicRoughness::VT_OCCLUSION_TEXTURE);
+    fbb_.Required(o, PBRMetallicRoughness::VT_EMISSIVE_TEXTURE);
+    fbb_.Required(o, PBRMetallicRoughness::VT_EMISSIVE_FACTOR);
     return o;
   }
 };

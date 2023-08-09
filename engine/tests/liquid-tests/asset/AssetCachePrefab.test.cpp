@@ -598,6 +598,13 @@ TEST_F(AssetCacheTest, LoadsPrefabWithMeshAnimationSkeleton) {
 
   // Create skeleton
   liquid::AssetData<liquid::SkeletonAsset> skeletonData{};
+  skeletonData.data = {.jointParents = {0},
+                       .jointLocalPositions = {{}},
+                       .jointLocalRotations = {{}},
+                       .jointLocalScales{{}},
+                       .jointInverseBindMatrices{{}},
+                       .jointNames{"Test"}};
+
   skeletonData.name = "test-prefab-skeleton";
   auto skeletonPath = cache.createSkeletonFromAsset(skeletonData);
   auto skeletonHandle = cache.loadSkeletonFromFile(skeletonPath.getData());
@@ -663,7 +670,7 @@ TEST_F(AssetCacheTest, LoadsPrefabWithMeshAnimationSkeleton) {
             liquid::SkeletonAssetHandle::Null);
   auto &newSkeleton = cache.getRegistry().getSkeletons().getAsset(
       newPrefab.data.skeletons.at(0).value);
-  EXPECT_EQ(newSkeleton.name, "test-prefab-skeleton.lqskel");
+  EXPECT_EQ(newSkeleton.name, "test-prefab-skeleton.skeleton");
 
   // Validate animation
   auto newAnimationHandle = newPrefab.data.animations.at(0);

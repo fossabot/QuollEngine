@@ -3,26 +3,26 @@ include "./Base.fbs";
 namespace liquid.schemas.asset;
 
 table PBRMetallicRoughness {
-    base_color_texture: string;
+    base_color_texture: string (required);
     base_color_texture_coordinate: ubyte = 0;
-    base_color_factor: base.Vec4;
+    base_color_factor: base.Vec4 (required);
 
-    metallic_roughness_texture: string;
+    metallic_roughness_texture: string (required);
     metallic_roughness_texture_coordinate: ubyte = 0;
     metallic_factor: float = 0.0;
     roughness_factor: float = 0.0;
 
-    normal_texture: string;
+    normal_texture: string (required);
     normal_texture_coordinate: ubyte = 0;
     normal_scale: float = 0.0;
 
-    occlusion_texture: string;
+    occlusion_texture: string (required);
     occlusion_texture_coordinate: ubyte = 0;
     occlusion_strength: float = 0.0;
 
-    emissive_texture: string;
+    emissive_texture: string (required);
     emissive_texture_coordinate: ubyte = 0;
-    emissive_factor: base.Vec3;
+    emissive_factor: base.Vec3 (required);
 }
 
 union MaterialData {

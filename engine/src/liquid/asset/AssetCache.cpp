@@ -141,6 +141,15 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
     return Result<bool>::Ok(true, res.getWarnings());
   }
 
+  if (ext == ".skeleton") {
+    auto res = loadSkeletonFromFile(path);
+
+    if (res.hasError()) {
+      return Result<bool>::Error(res.getError());
+    }
+    return Result<bool>::Ok(true, res.getWarnings());
+  }
+
   InputBinaryStream stream(path);
   AssetFileHeader header;
   String magic(AssetFileMagicLength, '$');
@@ -164,15 +173,6 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
 
   if (header.type == AssetType::SkinnedMesh) {
     auto res = loadSkinnedMeshDataFromInputStream(stream, path);
-
-    if (res.hasError()) {
-      return Result<bool>::Error(res.getError());
-    }
-    return Result<bool>::Ok(true, res.getWarnings());
-  }
-
-  if (header.type == AssetType::Skeleton) {
-    auto res = loadSkeletonDataFromInputStream(stream, path);
 
     if (res.hasError()) {
       return Result<bool>::Error(res.getError());

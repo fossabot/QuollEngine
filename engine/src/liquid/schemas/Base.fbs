@@ -12,3 +12,14 @@ struct Vec4 {
     z: float;
     w: float;
 }
+
+struct Quat {
+    x: float;
+    y: float;
+    z: float;
+    w: float;
+}
+
+struct Mat4 {
+    value: [Vec4:4];
+}

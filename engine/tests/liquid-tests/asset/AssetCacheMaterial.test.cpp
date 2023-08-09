@@ -4,7 +4,8 @@
 #include "liquid/core/Version.h"
 #include "liquid/asset/AssetCache.h"
 #include "liquid/asset/AssetFileHeader.h"
-#include "liquid/asset/InputBinaryStream.h"
+#include "liquid/schemas/generated/Material.schema.h"
+#include "liquid/schemas/FlatbufferHelpers.h"
 
 #include "liquid-tests/Testing.h"
 #include "liquid-tests/schemas/generated/Test.schema.h"
@@ -196,8 +197,27 @@ TEST_F(AssetCacheMaterialTest,
 
 TEST_F(AssetCacheMaterialTest, FailsToLoadMaterialIfFileIdentifierMismatch) {
   flatbuffers::FlatBufferBuilder builder;
-  auto testSchema = liquid::schemas::test::CreateTest(
-      builder, builder.CreateString("Test string"), 1);
+
+  auto emptyStr = builder.CreateString("");
+
+  auto emptyVec4 = liquid::schemas::toFb(glm::vec4{});
+  auto emptyVec3 = liquid::schemas::toFb(glm::vec3{});
+
+  liquid::schemas::asset::PBRMetallicRoughnessBuilder pbrBuilder(builder);
+  pbrBuilder.add_base_color_texture(emptyStr);
+  pbrBuilder.add_base_color_factor(&emptyVec4);
+  pbrBuilder.add_metallic_roughness_texture(emptyStr);
+  pbrBuilder.add_normal_texture(emptyStr);
+  pbrBuilder.add_occlusion_texture(emptyStr);
+  pbrBuilder.add_emissive_texture(emptyStr);
+  pbrBuilder.add_emissive_factor(&emptyVec3);
+
+  auto pbrMr = pbrBuilder.Finish();
+
+  auto testSchema = liquid::schemas::asset::CreateMaterial(
+      builder,
+      liquid::schemas::asset::MaterialData::MaterialData_PBRMetallicRoughness,
+      pbrMr.Union());
   builder.Finish(testSchema, "TEST");
 
   const auto *ptr = builder.GetBufferPointer();

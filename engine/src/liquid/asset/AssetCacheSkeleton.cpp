@@ -7,43 +7,91 @@
 #include "OutputBinaryStream.h"
 #include "InputBinaryStream.h"
 
+#include "liquid/schemas/generated/Skeleton.schema.h"
+#include "liquid/schemas/FlatbufferHelpers.h"
+
 namespace liquid {
 
 Result<Path>
 AssetCache::createSkeletonFromAsset(const AssetData<SkeletonAsset> &asset) {
-  String extension = ".lqskel";
-  Path assetPath = (mAssetsPath / (asset.name + extension)).make_preferred();
-  OutputBinaryStream file(assetPath);
+  const auto &data = asset.data;
+  flatbuffers::FlatBufferBuilder builder;
 
-  if (!file.good()) {
+  auto jointParents = builder.CreateVector(data.jointParents);
+  auto jointPositions =
+      builder.CreateVectorOfStructs(schemas::toFb(data.jointLocalPositions));
+  auto jointRotations =
+      builder.CreateVectorOfStructs(schemas::toFb(data.jointLocalRotations));
+  auto jointScales =
+      builder.CreateVectorOfStructs(schemas::toFb(data.jointLocalScales));
+  auto jointInverseBindMatrices = builder.CreateVectorOfStructs(
+      schemas::toFb(data.jointInverseBindMatrices));
+  auto jointNames = builder.CreateVectorOfStrings(data.jointNames);
+
+  auto skeleton = schemas::asset::CreateSkeleton(
+      builder, jointParents, jointPositions, jointRotations, jointScales,
+      jointInverseBindMatrices, jointNames);
+
+  builder.Finish(skeleton, schemas::asset::SkeletonIdentifier());
+
+  Path assetPath =
+      (mAssetsPath / asset.name).replace_extension("skeleton").make_preferred();
+
+  const auto *ptr = builder.GetBufferPointer();
+  std::ofstream stream(assetPath, std::ios::binary);
+  if (!stream.good()) {
     return Result<Path>::Error("File cannot be opened for writing: " +
                                assetPath.string());
   }
 
-  AssetFileHeader header{};
-  header.type = AssetType::Skeleton;
-  header.version = createVersion(0, 1);
-  file.write(header.magic, AssetFileMagicLength);
-  file.write(header.version);
-  file.write(header.type);
+  stream.write(reinterpret_cast<const char *>(ptr), builder.GetSize());
 
-  auto numJoints = static_cast<uint32_t>(asset.data.jointLocalPositions.size());
-  file.write(numJoints);
-
-  file.write(asset.data.jointLocalPositions);
-  file.write(asset.data.jointLocalRotations);
-  file.write(asset.data.jointLocalScales);
-  file.write(asset.data.jointParents);
-  file.write(asset.data.jointInverseBindMatrices);
-  file.write(asset.data.jointNames);
+  stream.close();
 
   return Result<Path>::Ok(assetPath);
 }
 
 Result<SkeletonAssetHandle>
-AssetCache::loadSkeletonDataFromInputStream(InputBinaryStream &stream,
-                                            const Path &filePath) {
-  auto assetName = std::filesystem::relative(filePath, mAssetsPath).string();
+AssetCache::loadSkeletonFromFile(const Path &filePath) {
+  std::ifstream stream(filePath, std::ios::binary);
+  if (!stream.good()) {
+    return Result<SkeletonAssetHandle>::Error("Cannot open skeleton file: " +
+                                              filePath.string());
+  }
+
+  stream.seekg(0, std::ios::end);
+  auto length = stream.tellg();
+  stream.seekg(0, std::ios::beg);
+  std::vector<uint8_t> buffer(length);
+  stream.read(reinterpret_cast<char *>(buffer.data()), length);
+  stream.close();
+
+  flatbuffers::Verifier::Options options{};
+  flatbuffers::Verifier verifier(buffer.data(), length, options);
+  if (!schemas::asset::VerifySkeletonBuffer(verifier)) {
+    return Result<SkeletonAssetHandle>::Error("File is not a valid skeleton: " +
+                                              filePath.string());
+  }
+
+  auto *fbSkeleton = schemas::asset::GetSkeleton(buffer.data());
+  if (!fbSkeleton->Verify(verifier)) {
+    return Result<SkeletonAssetHandle>::Error("File is not a valid skeleton: " +
+                                              filePath.string());
+  }
+
+  auto numJoints = fbSkeleton->joint_parents()->size();
+
+  bool jointListsMatch =
+      numJoints > 0 && numJoints == fbSkeleton->joint_positions()->size() &&
+      numJoints == fbSkeleton->joint_rotations()->size() &&
+      numJoints == fbSkeleton->joint_scales()->size() &&
+      numJoints == fbSkeleton->joint_inverse_bind_matrices()->size() &&
+      numJoints == fbSkeleton->joint_names()->size();
+
+  if (!jointListsMatch) {
+    return Result<SkeletonAssetHandle>::Error(
+        "Invalid number of joints in skeleton: " + filePath.string());
+  }
 
   AssetData<SkeletonAsset> skeleton{};
   skeleton.path = filePath;
@@ -51,37 +99,18 @@ AssetCache::loadSkeletonDataFromInputStream(InputBinaryStream &stream,
   skeleton.name = skeleton.relativePath.string();
   skeleton.type = AssetType::Skeleton;
 
-  uint32_t numJoints = 0;
-  stream.read(numJoints);
+  skeleton.data.jointParents = schemas::fromFb(fbSkeleton->joint_parents());
+  skeleton.data.jointLocalPositions =
+      schemas::fromFb(fbSkeleton->joint_positions());
+  skeleton.data.jointLocalRotations =
+      schemas::fromFb(fbSkeleton->joint_rotations());
+  skeleton.data.jointLocalScales = schemas::fromFb(fbSkeleton->joint_scales());
+  skeleton.data.jointInverseBindMatrices =
+      schemas::fromFb(fbSkeleton->joint_inverse_bind_matrices());
 
-  skeleton.data.jointLocalPositions.resize(numJoints);
-  skeleton.data.jointLocalRotations.resize(numJoints);
-  skeleton.data.jointLocalScales.resize(numJoints);
-  skeleton.data.jointParents.resize(numJoints);
-  skeleton.data.jointInverseBindMatrices.resize(numJoints);
-  skeleton.data.jointNames.resize(numJoints);
-
-  stream.read(skeleton.data.jointLocalPositions);
-  stream.read(skeleton.data.jointLocalRotations);
-  stream.read(skeleton.data.jointLocalScales);
-  stream.read(skeleton.data.jointParents);
-  stream.read(skeleton.data.jointInverseBindMatrices);
-  stream.read(skeleton.data.jointNames);
-
+  skeleton.data.jointNames = schemas::fromFb(fbSkeleton->joint_names());
   return Result<SkeletonAssetHandle>::Ok(
       mRegistry.getSkeletons().addAsset(skeleton));
-}
-
-Result<SkeletonAssetHandle>
-AssetCache::loadSkeletonFromFile(const Path &filePath) {
-  InputBinaryStream stream(filePath);
-
-  const auto &header = checkAssetFile(stream, filePath, AssetType::Skeleton);
-  if (header.hasError()) {
-    return Result<SkeletonAssetHandle>::Error(header.getError());
-  }
-
-  return loadSkeletonDataFromInputStream(stream, filePath);
 }
 
 Result<SkeletonAssetHandle>

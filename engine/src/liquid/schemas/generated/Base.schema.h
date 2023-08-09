@@ -21,6 +21,10 @@ struct Vec3;
 
 struct Vec4;
 
+struct Quat;
+
+struct Mat4;
+
 FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Vec3 FLATBUFFERS_FINAL_CLASS {
  private:
   float x_;
@@ -84,6 +88,58 @@ FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Vec4 FLATBUFFERS_FINAL_CLASS {
   }
 };
 FLATBUFFERS_STRUCT_END(Vec4, 16);
+
+FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Quat FLATBUFFERS_FINAL_CLASS {
+ private:
+  float x_;
+  float y_;
+  float z_;
+  float w_;
+
+ public:
+  Quat()
+      : x_(0),
+        y_(0),
+        z_(0),
+        w_(0) {
+  }
+  Quat(float _x, float _y, float _z, float _w)
+      : x_(::flatbuffers::EndianScalar(_x)),
+        y_(::flatbuffers::EndianScalar(_y)),
+        z_(::flatbuffers::EndianScalar(_z)),
+        w_(::flatbuffers::EndianScalar(_w)) {
+  }
+  float x() const {
+    return ::flatbuffers::EndianScalar(x_);
+  }
+  float y() const {
+    return ::flatbuffers::EndianScalar(y_);
+  }
+  float z() const {
+    return ::flatbuffers::EndianScalar(z_);
+  }
+  float w() const {
+    return ::flatbuffers::EndianScalar(w_);
+  }
+};
+FLATBUFFERS_STRUCT_END(Quat, 16);
+
+FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Mat4 FLATBUFFERS_FINAL_CLASS {
+ private:
+  liquid::schemas::base::Vec4 value_[4];
+
+ public:
+  Mat4()
+      : value_() {
+  }
+  Mat4(::flatbuffers::span<const liquid::schemas::base::Vec4, 4> _value) {
+    ::flatbuffers::CastToArray(value_).CopyFromSpan(_value);
+  }
+  const ::flatbuffers::Array<liquid::schemas::base::Vec4, 4> *value() const {
+    return &::flatbuffers::CastToArray(value_);
+  }
+};
+FLATBUFFERS_STRUCT_END(Mat4, 64);
 
 }  // namespace base
 }  // namespace schemas

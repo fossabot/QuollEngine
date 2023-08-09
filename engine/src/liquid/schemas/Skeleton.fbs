@@ -1,0 +1,20 @@
+include "./Base.fbs";
+
+namespace liquid.schemas.asset;
+
+table Skeleton {
+  joint_parents: [ubyte] (required);
+
+  joint_positions: [base.Vec3] (required);
+
+  joint_rotations: [base.Quat] (required);
+
+  joint_scales: [base.Vec3] (required);
+
+  joint_inverse_bind_matrices: [base.Mat4] (required);
+
+  joint_names: [string] (required);
+}
+
+file_identifier "LSKL";
+root_type Skeleton;

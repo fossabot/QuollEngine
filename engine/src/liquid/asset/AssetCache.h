@@ -316,16 +316,6 @@ private:
 
 private:
   /**
-   * @brief Load material from input stream
-   *
-   * @param stream Input stream
-   * @param filePath Path to asset
-   * @return Material asset handle
-   */
-  Result<MaterialAssetHandle>
-  loadMaterialDataFromInputStream(std::istream &stream, const Path &filePath);
-
-  /**
    * @brief Load mesh from input stream
    *
    * @param stream Input stream
@@ -346,16 +336,6 @@ private:
   loadSkinnedMeshDataFromInputStream(InputBinaryStream &stream,
                                      const Path &filePath);
 
-  /**
-   * @brief Load skeleton from input stream
-   *
-   * @param stream Input stream
-   * @param filePath Path to asset
-   * @return Skeleton asset handle
-   */
-  Result<SkeletonAssetHandle>
-  loadSkeletonDataFromInputStream(InputBinaryStream &stream,
-                                  const Path &filePath);
   /**
    * @brief Load animation from input stream
    *
