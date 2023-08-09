@@ -47,8 +47,7 @@ Result<Path> AssetCache::createEnvironmentFromAsset(
 }
 
 Result<EnvironmentAssetHandle>
-AssetCache::loadEnvironmentDataFromInputStream(InputBinaryStream &fa,
-                                               const Path &filePath) {
+AssetCache::loadEnvironmentFromFile(const Path &filePath) {
   std::ifstream stream(filePath, std::ios::binary);
   if (!stream.good()) {
     return Result<EnvironmentAssetHandle>::Error(
@@ -99,13 +98,6 @@ AssetCache::loadEnvironmentDataFromInputStream(InputBinaryStream &fa,
   auto environmentHandle = mRegistry.getEnvironments().addAsset(environment);
 
   return Result<EnvironmentAssetHandle>::Ok(environmentHandle);
-}
-
-Result<EnvironmentAssetHandle>
-AssetCache::loadEnvironmentFromFile(const Path &filePath) {
-  InputBinaryStream stream(filePath);
-
-  return loadEnvironmentDataFromInputStream(stream, filePath);
 }
 
 } // namespace liquid

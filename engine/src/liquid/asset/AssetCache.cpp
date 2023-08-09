@@ -104,16 +104,6 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
     return Result<bool>::Ok(true, res.getWarnings());
   }
 
-  if (ext == ".animator") {
-    auto res =
-        loadAnimatorFromFile(path, static_cast<AnimatorAssetHandle>(handle));
-    if (res.hasError()) {
-      return Result<bool>::Error(res.getError());
-    }
-
-    return Result<bool>::Ok(true, res.getWarnings());
-  }
-
   if (ext == ".wav" || ext == ".mp3" || ext == ".flac") {
     auto res = loadAudioFromFile(path);
     if (res.hasError()) {
@@ -150,13 +140,41 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
     return Result<bool>::Ok(true, res.getWarnings());
   }
 
+  if (ext == ".animation") {
+    auto res = loadAnimationFromFile(path);
+
+    if (res.hasError()) {
+      return Result<bool>::Error(res.getError());
+    }
+    return Result<bool>::Ok(true, res.getWarnings());
+  }
+
+  if (ext == ".animator") {
+    auto res =
+        loadAnimatorFromFile(path, static_cast<AnimatorAssetHandle>(handle));
+    if (res.hasError()) {
+      return Result<bool>::Error(res.getError());
+    }
+
+    return Result<bool>::Ok(true, res.getWarnings());
+  }
+
+  if (ext == ".environment") {
+    auto res = loadEnvironmentFromFile(path);
+
+    if (res.hasError()) {
+      return Result<bool>::Error(res.getError());
+    }
+    return Result<bool>::Ok(true, res.getWarnings());
+  }
+
   InputBinaryStream stream(path);
   AssetFileHeader header;
   String magic(AssetFileMagicLength, '$');
   stream.read(magic.data(), AssetFileMagicLength);
 
   if (magic != header.magic) {
-    return Result<bool>::Error("Not a liquid asset");
+    return Result<bool>::Error("Not a liquid asset: " + path.stem().string());
   }
 
   stream.read(header.version);
@@ -180,26 +198,8 @@ Result<bool> AssetCache::loadAsset(const Path &path, bool updateExisting) {
     return Result<bool>::Ok(true, res.getWarnings());
   }
 
-  if (header.type == AssetType::Animation) {
-    auto res = loadAnimationDataFromInputStream(stream, path);
-
-    if (res.hasError()) {
-      return Result<bool>::Error(res.getError());
-    }
-    return Result<bool>::Ok(true, res.getWarnings());
-  }
-
   if (header.type == AssetType::Prefab) {
     auto res = loadPrefabDataFromInputStream(stream, path);
-
-    if (res.hasError()) {
-      return Result<bool>::Error(res.getError());
-    }
-    return Result<bool>::Ok(true, res.getWarnings());
-  }
-
-  if (header.type == AssetType::Environment) {
-    auto res = loadEnvironmentDataFromInputStream(stream, path);
 
     if (res.hasError()) {
       return Result<bool>::Error(res.getError());

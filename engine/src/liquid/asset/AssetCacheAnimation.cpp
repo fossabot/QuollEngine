@@ -137,8 +137,7 @@ AssetCache::createAnimationFromAsset(const AssetData<AnimationAsset> &asset) {
 }
 
 Result<AnimationAssetHandle>
-AssetCache::loadAnimationDataFromInputStream(InputBinaryStream &as,
-                                             const Path &filePath) {
+AssetCache::loadAnimationFromFile(const Path &filePath) {
   std::ifstream stream(filePath, std::ios::binary);
   if (!stream.good()) {
     return Result<AnimationAssetHandle>::Error("Cannot open animation file: " +
@@ -191,13 +190,6 @@ AssetCache::loadAnimationDataFromInputStream(InputBinaryStream &as,
 
   return Result<AnimationAssetHandle>::Ok(
       mRegistry.getAnimations().addAsset(animation));
-}
-
-Result<AnimationAssetHandle>
-AssetCache::loadAnimationFromFile(const Path &filePath) {
-  InputBinaryStream stream(filePath);
-
-  return loadAnimationDataFromInputStream(stream, filePath);
 }
 
 Result<AnimationAssetHandle>

@@ -337,28 +337,6 @@ private:
                                      const Path &filePath);
 
   /**
-   * @brief Load animation from input stream
-   *
-   * @param stream Input stream
-   * @param filePath Path to asset
-   * @return Animation asset handle
-   */
-  Result<AnimationAssetHandle>
-  loadAnimationDataFromInputStream(InputBinaryStream &stream,
-                                   const Path &filePath);
-
-  /**
-   * @brief Load environment from input stream
-   *
-   * @param stream Input stream
-   * @param filePath Path to asset
-   * @return Environment asset handle
-   */
-  Result<EnvironmentAssetHandle>
-  loadEnvironmentDataFromInputStream(InputBinaryStream &stream,
-                                     const Path &filePath);
-
-  /**
    * @brief Load prefab from input stream
    *
    * @param stream Input stream

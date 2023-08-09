@@ -135,8 +135,10 @@ Result<Path> HDRIImporter::loadFromPath(const Path &originalAssetPath,
   device->destroyTexture(unfilteredCubemap.texture);
 
   AssetData<EnvironmentAsset> environment{};
-  environment.path =
-      engineAssetPath / originalAssetPath.filename().replace_extension("lqenv");
+  environment.relativePath =
+      engineAssetPath /
+      originalAssetPath.filename().replace_extension("environment");
+  environment.name = environment.relativePath.string();
   environment.data.specularMap = specularCubemap.getData();
   environment.data.irradianceMap = irradianceCubemap.getData();
 
